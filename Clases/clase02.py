@@ -53,6 +53,7 @@
 # tupla vacia 
 # tuplav = set() ***UNICA FORMA DE GENERAR UNA TUPLA VACIA 
 
+from ast import comprehension
 from doctest import OutputChecker
 from re import T
 from click import command
@@ -211,3 +212,24 @@ from click import command
 # >>d
 # Hola'
 
+# ********LISTA POR comprension 
+
+# #ejemplo tabla del 7
+# lista =[x+7 for x in range(7000)  ]
+# len(lista)
+# out: 7000
+# lista [:100] lo cortamos en los primeros 100 para no destruir la consola 
+
+
+# lista = [x*7 for x in range(7000) if (x*7) <=7000]
+# len(lista)
+
+# lista[-1]
+# out: 7000
+
+
+#  diccionario por comprension
+# lista =["a","b","c"]
+
+# dic = {x:x**2 for x in range(10)}
+# out: {0:0,1:1,2:4,3:9.....etc}
