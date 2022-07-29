@@ -53,10 +53,7 @@
 # tupla vacia 
 # tuplav = set() ***UNICA FORMA DE GENERAR UNA TUPLA VACIA 
 
-from ast import comprehension
-from doctest import OutputChecker
-from re import T
-from click import command
+
 
 
 # ********IMPORTANTE*******
@@ -233,3 +230,23 @@ from click import command
 
 # dic = {x:x**2 for x in range(10)}
 # out: {0:0,1:1,2:4,3:9.....etc}
+
+
+# cuenta la lista 
+# por cada elemento ese sera el valor por ejemplo si hay 3 A dara A:3
+# lista = ["A","B","A","C","B","A","A","B","C","B","A","C"]
+
+# lista_1  = {x:lista.count(x) for x in lista}
+
+# print (lista_1)
+
+lista2 =["A","B","A","B","A","C","B","A","A","B","C","B","A","C","C","B","A","A","B","C","B","A","C","B","A","C","B"]
+dic1 ={x:lista2.count(x) for x in set(lista2)}
+print(dic1)
+print("conjunto: ", set(dic1)) #lo transformamos en un set 
+
+
+#
+n = 17
+semilla = [0,1]
+l_fib =[0,1,1,2,3,5,8]
