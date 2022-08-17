@@ -1,5 +1,6 @@
-
 import time
+import sqlite3
+import os
 
 def ingreso_str(mensaje,error):
     dato = input(mensaje)
@@ -65,42 +66,81 @@ def confirmar():
         return False
 
 
+
+
 def guardarVentas(data):
-    renglon = ""
-    for n in data:
-        if n == "total":
-            renglon += str(data[n]) + "\n"
-        else:
-            renglon += str(data[n]) + ","
-    f = open("ventas.txt","a")
-    f.write(renglon)
-    f.close()
+    datos = tuple(data.values())
+    conn = sqlite3.connect("comercio.sqlite")
+    cursor = conn.cursor()
+    try:
+        cursor.execute("INSERT INTO ventas VALUES (null,?,?,?,?,?,?,?)", datos)
+    except sqlite3.OperationalError:
+        cursor.execute("""CREATE TABLE ventas 
+        ( 
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            cliente TEXT,
+            fecha TEXT,
+            ComboS INT,
+            ComboD INT,
+            ComboT INT,
+            Flurby INT,
+            total REAL
+        )
+        """)
+        cursor.execute("INSERT INTO ventas VALUES (null,?,?,?,?,?,?,?)", datos)
+    conn.commit()
+    conn.close
+    print("¡Se salvo el nuevo contacto!")
+
+
 
 def guardarEncargado(data):
-    ingreso = "IN "+ data["ingreso"] +" Encargad@ "+ data["nombre"]+"\n"
-    egreso = "OUT "+ data["egreso"] +" Encargad@ "+ data["nombre"] +" $ "+str(data["facturado"])+"\n"
-    separador = ("#"*50)+"\n"
-    f = open("registro.txt","a")
-    f.write(ingreso)
-    f.write(egreso)
-    f.write(separador)
-    f.close()
+    datosIn = (data["nombre"],data["ingreso"],"IN",0)
+    datosOut = (data["nombre"],data["egreso"],"OUT",data["facturado"])
+    conn = sqlite3.connect("comercio.sqlite")
+    cursor = conn.cursor()
+    try:
+        cursor.execute("INSERT INTO registro VALUES (null,?,?,?,?)", datosIn)
+        cursor.execute("INSERT INTO registro VALUES (null,?,?,?,?)", datosOut)
+    except sqlite3.OperationalError:
+        cursor.execute("""CREATE TABLE registro 
+        ( 
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            encargado TEXT,
+            fecha TEXT,
+            evento TEXT,
+            caja REAL
+        )
+        """)
+        cursor.execute("INSERT INTO registro VALUES (null,?,?,?,?)", datosIn)
+        cursor.execute("INSERT INTO registro VALUES (null,?,?,?,?)", datosOut)
+    conn.commit()
+    conn.close
+    print("¡Se salvo el nuevo contacto!")
+
+
 
 
 ######################################################################
 
+if(os.name=="nt"):
+    borrar = "cls"
+else:
+    borrar = "clear"
 
 precios = {"ComboSimple":5,"ComboDoble":6,"ComboTriple":7,"Flurby":2}
 salir = True
 
+os.system(borrar)
 while salir:
+    os.system(borrar)
     datosEncargado = {"nombre":"","ingreso":"","egreso":"","facturado":0}
     encargado = ingresar()
     inicio = time.asctime()
     datosEncargado["nombre"] = encargado
     datosEncargado["ingreso"] = inicio
     caja = 0
-    print("\n"*2)
+    os.system(borrar)
     while True:
         saludar(encargado)
         print("""
@@ -109,8 +149,8 @@ while salir:
         3 – Apagar sistema
         """)
         opcion = ingreso_str(">>>","Error, ingreso vacio")
+        os.system(borrar)
         if opcion == "1":
-            print("\n"*2)
             pedido = {"cliente":"","fecha":"","ComboSimple":0,"ComboDoble":0,"ComboTriple":0,"Flurby":0,"total":0}
             pedido["cliente"] = ingreso_str("Ingrese el nombre del cliente: ","Error. No deje este campo vacio")
             pedido["ComboSimple"] = ingreso_int("Ingrese cantidad Combo S: ","Error, solo números")
@@ -147,3 +187,4 @@ while salir:
         else:
             print("Opcion incorrecta, vuelva a intentarlo")
             print("\n*3")
+        os.system(borrar)
