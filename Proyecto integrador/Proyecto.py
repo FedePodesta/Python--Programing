@@ -1,97 +1,11 @@
+import tkinter as tk
+from tkinter import messagebox
 import time
 import sqlite3
-import os
-
-def ingreso_str(mensaje,error):
-    dato = input(mensaje)
-    while dato=="":
-        print(error)
-        dato = input(mensaje)
-    return dato
-
-
-def ingreso_int(mensaje,error):
-    dato = input(mensaje)
-    while True:
-        try:
-            dato = int(dato)
-            break
-        except ValueError:
-            print(error)
-        dato = input(mensaje)
-    return dato
-
-
-def ingreso_float(mensaje,error):
-    dato = input(mensaje)
-    while True:
-        try:
-            dato = float(dato)
-            break
-        except ValueError:
-            print(error)
-        dato = input(mensaje)
-    return dato
-
-
-def saludar(nombre):
-    print("Hamburguesas IT")  
-    print("Encargad@ -> " + nombre )
-    print("Recuerda, siempre hay que recibir al cliente con una sonrisa :) ")
-
-
-def ingresar():
-    print("Bienvenido a Hamburguesas IT")
-    nombre = ingreso_str("Ingrese su nombre encargad@: ","Error, campo vacio.")
-    return nombre
-
-
-def calcular(precios,pedido):
-    total = 0
-    total += pedido["ComboSimple"] * precios["ComboSimple"]
-    total += pedido["ComboDoble"] * precios["ComboDoble"]  
-    total += pedido["ComboTriple"] * precios["ComboTriple"]
-    total += pedido["Flurby"] * precios["Flurby"]
-    return total
-
-
-def confirmar():
-    respuesta = ingreso_str("¿Confirma el pedido? Y/N: ","Error. Campo vacio.")
-    while respuesta.lower() != "y" and respuesta.lower() != "n" and respuesta.lower() != "yes" and respuesta.lower() != "no":
-        print("Ingrese únicamente Y o N")
-        respuesta = ingreso_str("¿Confirma el pedido? Y/N: ","Error. Campo vacio.")
-    if respuesta == "y" or respuesta == "yes":
-        return True
-    else:
-        return False
-
-
-
-
-def guardarVentas(data):
-    datos = tuple(data.values())
-    conn = sqlite3.connect("comercio.sqlite")
-    cursor = conn.cursor()
-    try:
-        cursor.execute("INSERT INTO ventas VALUES (null,?,?,?,?,?,?,?)", datos)
-    except sqlite3.OperationalError:
-        cursor.execute("""CREATE TABLE ventas 
-        ( 
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            cliente TEXT,
-            fecha TEXT,
-            ComboS INT,
-            ComboD INT,
-            ComboT INT,
-            Flurby INT,
-            total REAL
-        )
-        """)
-        cursor.execute("INSERT INTO ventas VALUES (null,?,?,?,?,?,?,?)", datos)
-    conn.commit()
-    conn.close
-    print("¡Se salvo el nuevo contacto!")
-
+import requests
+import sys
+ 
+##########################
 
 
 def guardarEncargado(data):
@@ -116,75 +30,175 @@ def guardarEncargado(data):
         cursor.execute("INSERT INTO registro VALUES (null,?,?,?,?)", datosOut)
     conn.commit()
     conn.close
-    print("¡Se salvo el nuevo contacto!")
+
+ 
+def guardarVentas(data):
+    datos = tuple(data)
+    conn = sqlite3.connect("comercio.sqlite")
+    cursor = conn.cursor()
+    try:
+        cursor.execute("INSERT INTO ventas VALUES (null,?,?,?,?,?,?,?)", datos)
+    except sqlite3.OperationalError:
+        cursor.execute("""CREATE TABLE ventas 
+        ( 
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            cliente TEXT,
+            fecha TEXT,
+            ComboS INT,
+            ComboD INT,
+            ComboT INT,
+            Flurby INT,
+            total REAL
+        )
+        """)
+        cursor.execute("INSERT INTO ventas VALUES (null,?,?,?,?,?,?,?)", datos)
+    conn.commit()
+    conn.close
+
+def cotizar():
+    try:
+        r = requests.get("https://api-dolar-argentina.herokuapp.com/api/dolaroficial")
+        valor = r.json()["venta"]
+        valor = round(float(valor))
+        return valor
+    except:
+        messagebox.showerror(title="Error grave", message="Sin internet para cotizar. Terminado")
+        sys.exit()
 
 
+def validar(dato):
+	try:
+		dato = int(dato)
+		return dato
+	except ValueError:
+		return -1
+ 
+ 
+def borrar():
+    #no borramos el encargado, para no tener que estar reescribiendolo siempre
+    ccomboUno.delete(0,tk.END)
+    ccomboDos.delete(0,tk.END)
+    ccomboTres.delete(0,tk.END)
+    cpostre.delete(0,tk.END)
+    ccliente.delete(0,tk.END)
 
 
-######################################################################
+def cancelar_pedido():
+	respuesta = messagebox.askyesno(title="Pregunta", message="¿Desea cancelar el pedido?")
+	if respuesta:
+		borrar()
 
-if(os.name=="nt"):
-    borrar = "cls"
-else:
-    borrar = "clear"
+
+ 
+def pedir():
+    cantUno= ccomboUno.get()
+    cantUno = validar(cantUno)
+    cantDos = ccomboDos.get()
+    cantDos = validar(cantDos)
+    cantTres = ccomboTres.get()
+    cantTres = validar(cantTres)
+    cantPostre = cpostre.get()
+    cantPostre = validar(cantPostre) 
+    dolar = cotizar() 
+    if cantUno>=0 and cantDos>=0 and cantTres>=0 and cantPostre>=0:
+        cliente = ccliente.get()
+        encargado = cencargado.get()
+        if cliente and encargado:
+            respuesta = messagebox.askyesno(title="Pregunta", message="¿Confirma el pedido?")
+            if respuesta:
+                costot = ((cantUno*precios["ComboSimple"])+(cantDos*precios["ComboDoble"])+(cantTres*precios["ComboTriple"])+(cantPostre*precios["Flurby"]))
+                totalPesos = costot * dolar
+                fecha = time.asctime()
+                pedido = [cliente,fecha,cantUno,cantDos,cantTres,cantPostre,totalPesos]
+                messagebox.showinfo(title="A pagar", message="$"+str(totalPesos))
+                guardarVentas(pedido)
+                messagebox.showinfo(title="Información", message="Pedido Exitoso")
+                if  datosEncargado["nombre"] != encargado and datosEncargado["egreso"] == "" : # cuando inicia la app egreso es vacio
+                    datosEncargado["nombre"] = encargado
+                    datosEncargado["egreso"] = "SinFecha" # es solo para que la proxima no cumpla la condición, es solo al inicio
+                    datosEncargado["facturado"] += totalPesos #voy incrementando totales
+                elif datosEncargado["nombre"] == encargado:
+                    datosEncargado["facturado"] += totalPesos #voy incrementando totales
+                else:
+                    datosEncargado["egreso"] = fecha # al cambiar de encargado registro la fecha
+                    guardarEncargado(datosEncargado) # guardo
+                    #borramos el encargado anterior, en el diccionario ponemos el nuevo
+                    datosEncargado["nombre"] = encargado # iniciamos el nuevo encargado
+                    datosEncargado["Ingreso"] = fecha
+                    datosEncargado["facturado"] = 0
+                    datosEncargado["facturado"] += totalPesos
+                borrar()
+            else:
+                messagebox.showinfo(title="Información", message="Pedido en pausa")
+        else:
+            messagebox.showwarning(title="Advertencia", message="Error, ingrese bien los datos")
+    else:
+        messagebox.showwarning(title="Advertencia", message="Error, ingrese datos correctos")
+ 
+
+def salir():
+    #salir seguro implica guardar el último encargado
+    respuesta = messagebox.askyesno(title="Pregunta", message="¿Desea salir?")
+    if respuesta:
+        datosEncargado["egreso"] = time.asctime()
+        guardarEncargado(datosEncargado)
+        sys.exit()
+    
+
+ 
+##########################
 
 precios = {"ComboSimple":5,"ComboDoble":6,"ComboTriple":7,"Flurby":2}
-salir = True
+datosEncargado = {"nombre":"","ingreso":time.asctime(),"egreso":"","facturado":0}
+ 
+##########################
+ 
+ventana = tk.Tk()
+ventana.config(width = 400, height = 400)
+ventana.title("Delivery")
+ 
+#####etiquetas######
+ebienvenido = tk.Label(text="------ Pedidos -------")
+ebienvenido.place(x = 140, y = 20)
 
-os.system(borrar)
-while salir:
-    os.system(borrar)
-    datosEncargado = {"nombre":"","ingreso":"","egreso":"","facturado":0}
-    encargado = ingresar()
-    inicio = time.asctime()
-    datosEncargado["nombre"] = encargado
-    datosEncargado["ingreso"] = inicio
-    caja = 0
-    os.system(borrar)
-    while True:
-        saludar(encargado)
-        print("""
-        1 – Ingreso de nuevo pedido
-        2 – Cambio de turno
-        3 – Apagar sistema
-        """)
-        opcion = ingreso_str(">>>","Error, ingreso vacio")
-        os.system(borrar)
-        if opcion == "1":
-            pedido = {"cliente":"","fecha":"","ComboSimple":0,"ComboDoble":0,"ComboTriple":0,"Flurby":0,"total":0}
-            pedido["cliente"] = ingreso_str("Ingrese el nombre del cliente: ","Error. No deje este campo vacio")
-            pedido["ComboSimple"] = ingreso_int("Ingrese cantidad Combo S: ","Error, solo números")
-            pedido["ComboDoble"] = ingreso_int("Ingrese cantidad Combo D: ","Error, solo números")
-            pedido["ComboTriple"] = ingreso_int("Ingrese cantidad Combo T: ","Error, solo números")
-            pedido["Flurby"] = ingreso_int("Ingrese cantidad Flurby: ","Error, solo números")
-            costoTotal = calcular(precios,pedido)
-            print("Total $", costoTotal)
-            recibido = ingreso_float("Abona con $ ","Error, solo números")
-            while costoTotal > recibido:
-                print("Ingrese un monto mayor, no alcanza.")
-                recibido = ingreso_float("Abona con $ ","Error, solo números")
-            print("Vuelto $",recibido-costoTotal)
-            estado = confirmar()
-            if estado:
-                caja += costoTotal
-                pedido["fecha"] = time.asctime()
-                pedido["total"] = costoTotal
-                guardarVentas(pedido)
-            else:
-                print("Pedido cancelado")
-        elif opcion == "2":
-            datosEncargado["egreso"] = time.asctime()
-            datosEncargado["facturado"] = caja
-            guardarEncargado(datosEncargado)
-            break
-        elif opcion == "3":
-            datosEncargado["egreso"] = time.asctime()
-            datosEncargado["facturado"] = caja
-            guardarEncargado(datosEncargado)
-            print("¡Muchas gracias por usar nuestro programa!")
-            salir = False
-            break
-        else:
-            print("Opcion incorrecta, vuelva a intentarlo")
-            print("\n*3")
-        os.system(borrar)
+enombreEncargado = tk.Label(text = "Nombre Encargado : ")
+enombreEncargado.place(x = 50, y = 70)
+ecomboUno = tk.Label(text = "Combo S cantidad : ")
+ecomboUno.place(x = 50, y = 110)
+ecomboDos = tk.Label(text = "Combo D cantidad : ")
+ecomboDos.place(x = 50, y = 150)
+ecomboTres = tk.Label(text = "Combo T cantidad : ")
+ecomboTres.place(x = 50, y = 190)
+ecliente = tk.Label(text = "Postre cantidad : ")
+ecliente.place(x = 50, y = 230)
+epostre = tk.Label(text = "Nombre del cliente : ")
+epostre.place(x = 50, y = 270)
+ 
+#####cajas#########
+
+cencargado = tk.Entry()
+cencargado.place(x = 230, y = 70)
+ccomboUno = tk.Entry()
+ccomboUno.place(x = 230, y = 110)
+ccomboDos = tk.Entry()
+ccomboDos.place(x = 230, y = 150)
+ccomboTres = tk.Entry()
+ccomboTres.place(x = 230, y = 190)
+cpostre = tk.Entry()
+cpostre.place(x = 230, y = 230)
+ccliente = tk.Entry()
+ccliente.place(x = 230, y = 270)
+ 
+##### Botones #########
+ 
+bpedido = tk.Button(text = "Hacer Pedido", command = pedir)
+bpedido.place(x = 270 , y = 330, height=40, width = 100)
+ 
+bcancelar = tk.Button(text = "Cancelar Pedido", command = cancelar_pedido)
+bcancelar.place(x = 150 , y = 330, height=40, width = 100)
+ 
+binfo = tk.Button(text = "Salir seguro",command=salir)
+binfo.place(x = 30 , y = 330, height=40, width = 100)
+ 
+ 
+ventana.mainloop()
